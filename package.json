@@ -1,0 +1,21 @@
+{
+  "name": "signet-protocol",
+  "private": true,
+  "packageManager": "pnpm@9.7.0",
+  "engines": { "node": ">=20.11.0" },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+  "turbo": "^2.0.11",
+  "@playwright/test": "^1.55.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

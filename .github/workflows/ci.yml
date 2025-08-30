@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+      - name: Type check & Lint JS
+        run: pnpm run typecheck && pnpm run lint
+      - name: Test JS
+        run: pnpm run test
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install core-api deps
+        working-directory: apps/core-api
+        run: pip install .[dev]
+      - name: Lint Python
+        working-directory: apps/core-api
+        run: ruff check . && mypy server
+      - name: Security checks
+        working-directory: apps/core-api
+        run: bandit -r server || true && pip-audit || true
+      - name: Test core-api
+        working-directory: apps/core-api
+        run: pytest

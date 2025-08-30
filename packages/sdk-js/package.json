@@ -1,0 +1,31 @@
+{
+  "name": "signet-verify-js",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --dts --format cjs,esm",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "canonicalize": "^2.0.0",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "typescript": "^5.8.0",
+    "vitest": "^2.0.5",
+    "eslint": "^9.7.0",
+    "@types/node": "^22.5.4"
+  }
+}

@@ -1,0 +1,9 @@
+# Use LF for text
+* text=auto eol=lf
+
+# Treat common media as LFS (optional for later enablement)
+*.png filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.svg filter=lfs diff=lfs merge=lfs -text
+*.mp4 filter=lfs diff=lfs merge=lfs -text

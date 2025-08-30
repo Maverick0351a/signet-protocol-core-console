@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "next.config.mjs", "use": "@vercel/next" }
+  ],
+  "env": {
+    "CORE_API_URL": "https://api.example.com"
+  }
+}
