@@ -1,0 +1,92 @@
+version: 2
+updates:
+  # Keep GitHub Actions up to date
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+      time: "05:00"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+      include: scope
+
+  # Root JS workspace (pnpm). Dependabot treats this as npm; ensure a lockfile (pnpm-lock.yaml) exists for full functionality.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+      time: "05:10"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+      include: scope
+    # Group minor/patch bumps together to reduce CI churn.
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # Console app (Next.js)
+  - package-ecosystem: npm
+    directory: /apps/console
+    schedule:
+      interval: daily
+      time: "05:20"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # JS SDK
+  - package-ecosystem: npm
+    directory: /packages/sdk-js
+    schedule:
+      interval: daily
+      time: "05:30"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # Python Core API service
+  - package-ecosystem: pip
+    directory: /apps/core-api
+    schedule:
+      interval: daily
+      time: "05:40"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # Python verification SDK
+  - package-ecosystem: pip
+    directory: /packages/sdk-py
+    schedule:
+      interval: daily
+      time: "05:50"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # (Optional) Security updates quickly – uncomment to separate security PRs
+  # - package-ecosystem: npm
+  #   directory: /
+  #   schedule:
+  #     interval: daily
+  #   allow:
+  #     - dependency-type: direct
+  #   labels: [security]
