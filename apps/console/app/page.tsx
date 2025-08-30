@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+// Ensure no leading/trailing whitespace in import path
 import HomeClient from './pageClient';
 
 export default function Home() {
