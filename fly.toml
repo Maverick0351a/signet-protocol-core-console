@@ -1,0 +1,35 @@
+app = "signet-core-api"  # change to a unique name if already taken
+primary_region = "iad"
+
+[build]
+# Path to Dockerfile and context directory (limit build scope)
+dockerfile = "apps/core-api/Dockerfile"
+
+[env]
+# Runtime configuration (do NOT commit secrets; set via `fly secrets set`)
+# SP_KID is the key id advertised in JWKS; SP_PRIVATE_KEY_B64 is Ed25519 32-byte seed base64url (no padding)
+# SP_HEL_ALLOWLIST is a comma or JSON list of allowed forward hostnames (HTTPS enforced) and is now provided via secrets
+SP_KID = "prod-key-1"
+
+[http_service]
+internal_port = 8088
+force_https = true
+auto_stop_machines = true
+auto_start_machines = true
+min_machines_running = 1
+processes = ["app"]
+
+[[vm]]
+memory = "512MB"
+cpu_kind = "shared"
+cpus = 1
+
+# Basic health checks hitting /healthz
+[checks]
+  [checks.healthz]
+  port = 8088
+  type = "http"
+  interval = "15s"
+  timeout = "2s"
+  grace_period = "10s"
+  path = "/healthz"
