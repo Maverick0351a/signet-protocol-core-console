@@ -6,5 +6,6 @@ signet_verify.egg-info/SOURCES.txt
 signet_verify.egg-info/dependency_links.txt
 signet_verify.egg-info/requires.txt
 signet_verify.egg-info/top_level.txt
+tests/test_snippets.py
 tests/test_verify.py
 tests/test_verify_export.py

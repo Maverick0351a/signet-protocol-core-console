@@ -22,3 +22,5 @@ signet_core_api.egg-info/top_level.txt
 tests/test_exchange_and_chain.py
 tests/test_exchange_metrics.py
 tests/test_health.py
+tests/test_hel_forward.py
+tests/test_idempotency_and_limits.py

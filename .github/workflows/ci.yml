@@ -28,7 +28,8 @@ jobs:
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          # Match package.json packageManager (pnpm@9.7.0) to avoid mismatch errors
+          version: 9.7.0
       - name: Setup Node.js ${{ matrix.node }}
         uses: actions/setup-node@v4
         with:
