@@ -44,5 +44,6 @@ test('demo exchange -> chain viewer verification', async ({ page, request, baseU
   await expect(page.getByTestId('hop-1')).toBeVisible({ timeout: 20000 });
   await expect(page.getByTestId('hop-1-status')).toHaveText(/Verified/i, { timeout: 10000 });
   const chainStatus = page.getByTestId('chain-status');
-  if (await chainStatus.isVisible()) await expect(chainStatus).toHaveText(/All hops verified/i);
+  // Accept both legacy wording ("All hops verified") and new wording ("All hops CID-match")
+  if (await chainStatus.isVisible()) await expect(chainStatus).toHaveText(/All hops (CID-match|verified)/i);
 });

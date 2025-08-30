@@ -85,7 +85,15 @@ async def test_idempotency_and_metrics():
         )
         assert r_second.status_code == 200
         assert r_second.headers.get("X-SIGNET-Idempotent") == "true"
-        assert r_second.json() == body_first
+        body_second = r_second.json()
+        # Same trace and core fields; replay marked idempotent true
+        assert body_second["trace_id"] == body_first["trace_id"]
+        assert body_first.get("idempotent") is False
+        assert body_second.get("idempotent") is True
+        # Remove idempotent flag and compare remaining structure
+        b1 = {k: v for k, v in body_first.items() if k != "idempotent"}
+        b2 = {k: v for k, v in body_second.items() if k != "idempotent"}
+        assert b2 == b1
 
         metrics = await _metrics_text(ac)
         # Basic assertions

@@ -21,6 +21,13 @@ export default function HomeClient() {
   const [playTrace, setPlayTrace] = useState<string | null>(null);
   const [playErr, setPlayErr] = useState<string | null>(null);
   const [playLoading, setPlayLoading] = useState(false);
+  const [forwardEnabled, setForwardEnabled] = useState(false);
+  const [forwardUrl, setForwardUrl] = useState('https://example.org/forward-endpoint');
+  const [autoIdem, setAutoIdem] = useState(true);
+  const [idemKey, setIdemKey] = useState<string | null>(null);
+  const [computedCid, setComputedCid] = useState<string | null>(null);
+  const [normalizedDoc, setNormalizedDoc] = useState<any | null>(null);
+  const [respHeaders, setRespHeaders] = useState<Record<string,string>>({});
 
   async function ask() {
     setLoading(true);
@@ -64,25 +71,59 @@ export default function HomeClient() {
       <section className="grid gap-4">
         <h2 className="text-2xl font-semibold flex items-center gap-2">Exchange Playground</h2>
         <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-6 space-y-4">
-          <p className="text-sm text-neutral-400">Submit a raw JSON body to <code>/v1/exchange</code> via the Next.js server route.</p>
-          <textarea className="w-full h-48 rounded-md bg-neutral-800 p-3 font-mono text-xs outline-none" value={playPayload} onChange={e => setPlayPayload(e.target.value)} />
-          <div className="flex gap-2">
+          <p className="text-sm text-neutral-400">Submit a JSON body to <code>/v1/exchange</code>. Optionally forward (HEL enforced) and reuse idempotency keys.</p>
+          <div className="flex flex-col md:flex-row gap-4">
+            <textarea className="flex-1 h-64 rounded-md bg-neutral-800 p-3 font-mono text-xs outline-none" value={playPayload} onChange={e => setPlayPayload(e.target.value)} />
+            <div className="w-full md:w-64 space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={forwardEnabled} onChange={e=>setForwardEnabled(e.target.checked)} /> Forward URL</label>
+              </div>
+              {forwardEnabled && <input className="w-full rounded bg-neutral-800 px-2 py-1 font-mono" value={forwardUrl} onChange={e=>setForwardUrl(e.target.value)} placeholder="https://host/path" />}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={autoIdem} onChange={e=>{setAutoIdem(e.target.checked); if (!e.target.checked) setIdemKey(null);}} /> Auto Idempotency</label>
+                {idemKey && <button className="underline" onClick={()=>{setIdemKey(crypto.randomUUID());}}>Rotate</button>}
+              </div>
+              {!autoIdem && <input className="w-full rounded bg-neutral-800 px-2 py-1 font-mono" placeholder="custom-key" value={idemKey ?? ''} onChange={e=>setIdemKey(e.target.value || null)} />}
+              {autoIdem && <div className="font-mono break-all text-[10px] text-neutral-400">{idemKey || '(auto on send)'}</div>}
+              {computedCid && <div className="text-green-400 font-mono break-all">CID: {computedCid}</div>}
+              {playTrace && <div className="font-mono break-all">Trace: {playTrace}</div>}
+              {respHeaders['X-SIGNET-Idempotent'] === 'true' && <div className="text-amber-400">Idempotent HIT</div>}
+            </div>
+          </div>
+          <div className="flex gap-2 flex-wrap pt-2">
             <button onClick={async () => {
-              setPlayErr(null); setPlayResp(null); setPlayTrace(null); setPlayLoading(true);
+              setPlayErr(null); setPlayResp(null); setPlayTrace(null); setPlayLoading(true); setComputedCid(null); setNormalizedDoc(null); setRespHeaders({});
               try {
-                const r = await fetch('/api/signet/exchange', { method: 'POST', body: playPayload });
+                // Validate JSON first for friendly error
+                let bodyObj: any;
+                try { bodyObj = JSON.parse(playPayload); } catch (e:any) { throw new Error('Malformed JSON: '+ e.message); }
+                if (forwardEnabled) bodyObj.forward_url = forwardUrl; else delete bodyObj.forward_url;
+                const headers: Record<string,string> = { 'content-type': 'application/json' };
+                if (autoIdem) {
+                  const key = idemKey || crypto.randomUUID();
+                  setIdemKey(key);
+                  headers['X-SIGNET-Idempotency-Key'] = key;
+                } else if (idemKey) headers['X-SIGNET-Idempotency-Key'] = idemKey;
+                const r = await fetch('/api/signet/exchange', { method: 'POST', body: JSON.stringify(bodyObj), headers });
+                const headerMap: Record<string,string> = {};
+                r.headers.forEach((v,k)=> headerMap[k] = v);
+                setRespHeaders(headerMap);
                 const j = await r.json();
                 if (!r.ok) throw new Error(j.detail || j.error || `HTTP ${r.status}`);
                 setPlayResp(j); setPlayTrace(j.trace_id);
+                setNormalizedDoc(j.normalized);
+                try { const cid = await computeCidJcs(j.normalized); setComputedCid(cid);} catch {/* ignore */}
               } catch (e:any) { setPlayErr(e.message); } finally { setPlayLoading(false); }
-            }} disabled={playLoading} className="inline-flex items-center gap-2 rounded-md bg-violet-600 px-4 py-2 font-medium hover:bg-violet-500 disabled:opacity-50">{playLoading ? 'Running...' : 'Run Demo Exchange'} <ArrowRight className="h-4 w-4" /></button>
+            }} disabled={playLoading} className="inline-flex items-center gap-2 rounded-md bg-violet-600 px-4 py-2 font-medium hover:bg-violet-500 disabled:opacity-50">{playLoading ? 'Running...' : 'Run Exchange'} <ArrowRight className="h-4 w-4" /></button>
             {playTrace && <>
               <span data-testid="trace-id" className="px-2 py-2 text-xs font-mono bg-neutral-800 rounded border border-neutral-700">{playTrace}</span>
               <button onClick={() => { setTraceIdLookup(playTrace); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="inline-flex items-center gap-2 rounded-md bg-neutral-700 px-4 py-2 text-sm hover:bg-neutral-600">Chain Viewer</button>
             </>}
           </div>
-          {playErr && <div className="text-red-400 text-sm">{playErr}</div>}
-          {playResp && <pre className="max-h-72 overflow-auto rounded bg-neutral-800 p-3 text-xs">{JSON.stringify(playResp, null, 2)}</pre>}
+          {playErr && <div className="text-red-400 text-sm border border-red-700 rounded p-2 bg-red-950/20">{playErr}</div>}
+          {normalizedDoc && <details open className="rounded bg-neutral-900 p-3"><summary className="cursor-pointer text-sm">Normalized Document</summary><pre className="mt-2 max-h-40 overflow-auto text-xs">{JSON.stringify(normalizedDoc, null, 2)}</pre></details>}
+          {playResp && <details className="rounded bg-neutral-900 p-3"><summary className="cursor-pointer text-sm">Full Response</summary><pre className="mt-2 max-h-72 overflow-auto rounded bg-neutral-800 p-3 text-xs">{JSON.stringify(playResp, null, 2)}</pre></details>}
+          {Object.keys(respHeaders).length>0 && <details className="rounded bg-neutral-900 p-3"><summary className="cursor-pointer text-sm">Response Headers</summary><pre className="mt-2 max-h-48 overflow-auto text-[10px]">{Object.entries(respHeaders).map(([k,v])=>k+': '+v).join('\n')}</pre></details>}
         </div>
       </section>
       <section className="grid gap-4">
@@ -95,9 +136,9 @@ export default function HomeClient() {
               try {
                 const exportRes = await fetch(`/api/signet/receipts/export/${traceIdLookup}`);
                 if (!exportRes.ok) throw new Error(`Export failed ${exportRes.status}`);
-                const responseCid = exportRes.headers.get('X-ODIN-Response-CID') || '';
-                const sig = exportRes.headers.get('X-ODIN-Signature') || '';
-                const kid = exportRes.headers.get('X-ODIN-KID') || '';
+                const responseCid = exportRes.headers.get('X-SIGNET-Response-CID') || '';
+                const sig = exportRes.headers.get('X-SIGNET-Signature') || '';
+                const kid = exportRes.headers.get('X-SIGNET-KID') || '';
                 const bundle = await exportRes.json();
                 const mismatches: Record<number,string> = {};
                 for (const rec of bundle.chain) {

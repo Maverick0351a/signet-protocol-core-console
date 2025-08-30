@@ -15,9 +15,9 @@ export async function GET(_req: Request, ctx: any) {
       status: upstream.status,
       headers: {
         'content-type': 'application/json',
-        'X-ODIN-Response-CID': upstream.headers.get('X-ODIN-Response-CID') || '',
-        'X-ODIN-Signature': upstream.headers.get('X-ODIN-Signature') || '',
-        'X-ODIN-KID': upstream.headers.get('X-ODIN-KID') || '',
+        'X-SIGNET-Response-CID': upstream.headers.get('X-SIGNET-Response-CID') || upstream.headers.get('X-ODIN-Response-CID') || '',
+        'X-SIGNET-Signature': upstream.headers.get('X-SIGNET-Signature') || upstream.headers.get('X-ODIN-Signature') || '',
+        'X-SIGNET-KID': upstream.headers.get('X-SIGNET-KID') || upstream.headers.get('X-ODIN-KID') || '',
       }
     });
   } catch (e) {

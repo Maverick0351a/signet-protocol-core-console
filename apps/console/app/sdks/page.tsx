@@ -34,9 +34,9 @@ curl -s "$CORE_API_URL/v1/receipts/chain/<trace_id>" | jq .
 
 # Export bundle (capture headers for verification)
 resp=$(curl -i -s "$CORE_API_URL/v1/receipts/export/<trace_id>")
-sig=$(echo "$resp" | awk -F': ' '/X-ODIN-Signature/{print $2}' | tr -d '\r')
-kid=$(echo "$resp" | awk -F': ' '/X-ODIN-KID/{print $2}' | tr -d '\r')
-cid=$(echo "$resp" | awk -F': ' '/X-ODIN-Response-CID/{print $2}' | tr -d '\r')
+sig=$(echo "$resp" | awk -F': ' '/X-SIGNET-Signature/{print $2}' | tr -d '\r')
+kid=$(echo "$resp" | awk -F': ' '/X-SIGNET-KID/{print $2}' | tr -d '\r')
+cid=$(echo "$resp" | awk -F': ' '/X-SIGNET-Response-CID/{print $2}' | tr -d '\r')
 body=$(echo "$resp" | sed -n '/^{/,$p')
 echo "Signature=$sig Kid=$kid ResponseCID=$cid"`;
 

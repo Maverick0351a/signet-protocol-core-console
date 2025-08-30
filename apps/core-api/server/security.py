@@ -1,4 +1,5 @@
 import base64
+import logging
 import time
 from typing import Any
 
@@ -9,12 +10,22 @@ from .settings import settings
 _cached_pub: dict[str, Any] | None = None
 _cached_at: float = 0.0
 
+_dev_warned = False
+_dev_sk: SigningKey | None = None
+
 def get_signing_key() -> SigningKey:
+    global _dev_warned
     if settings.private_key_b64:
         raw = base64.urlsafe_b64decode(settings.private_key_b64 + "===")
         return SigningKey(raw)
-    # Dev key (DO NOT USE IN PROD)
-    return SigningKey.generate()
+    global _dev_sk
+    if _dev_sk is None:
+        if not _dev_warned:
+            logging.getLogger(__name__).warning(
+                "Generating ephemeral dev signing key (no SP_PRIVATE_KEY_B64 provided)"
+            )
+        _dev_sk = SigningKey.generate()  # Dev key (DO NOT USE IN PROD)
+    return _dev_sk
 
 def current_jwk() -> dict[str, Any]:
     global _cached_pub, _cached_at

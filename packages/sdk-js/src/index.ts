@@ -53,10 +53,20 @@ export function decodeB64u(s: string): Uint8Array {
   return out;
 }
 
+export function encodeB64u(bytes: Uint8Array): string {
+  const B: any = (globalThis as any).Buffer;
+  const b64 = B ? B.from(bytes).toString("base64") : btoa(String.fromCharCode(...bytes));
+  return b64.replace(/=+$/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+
 export interface ExportedChainBundle {
   trace_id: string;
   chain: Array<{ trace_id: string; ts: string; cid: string; receipt_hash: string; prev_receipt_hash?: string; hop: number }>;
   exported_at: string;
+  // Optionally include signature metadata (mirrors response headers) for convenience
+  response_cid?: string;
+  signature?: string; // base64url ed25519 signature of `${response_cid}|${trace_id}|${exported_at}`
+  kid?: string;
 }
 
 export function verifyReceiptExport(bundle: ExportedChainBundle, responseCid: string, signatureB64u: string, jwk: { kty: string; crv: string; x: string }): boolean {
@@ -67,16 +77,51 @@ export function verifyReceiptExport(bundle: ExportedChainBundle, responseCid: st
   return verifyEd25519(message, signatureB64u, jwk.x);
 }
 
-export function verifyReceipt(receipt: { receipt_hash: string; prev_receipt_hash?: string; cid: string; hop: number; trace_id: string; ts: string; normalized?: unknown }, jwks: { keys: JsonWebKeyEd25519[] }, kid?: string): boolean {
-  // For now receipt verification is structural + CID recompute check (signature applies to bundle). If future per-receipt signatures added, adapt here.
+export async function verifyReceipt(
+  receipt: { receipt_hash: string; prev_receipt_hash?: string; cid: string; hop: number; trace_id: string; ts: string; normalized?: unknown },
+  jwks: { keys: JsonWebKeyEd25519[] },
+  kid?: string
+): Promise<boolean> {
   if (!receipt || typeof receipt !== "object") return false;
-  if (!receipt.cid?.startsWith?.("sha256:")) return false;
-  // If normalized present, recompute CID to ensure integrity.
-  if (receipt.normalized) {
-    // We ignore errors and treat mismatch as failure.
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    return !!(receipt as any).normalized; // placeholder no-op (Chain Viewer separately recomputes via computeCidJcs)
+  if (typeof receipt.cid !== "string" || !receipt.cid.startsWith("sha256:")) return false;
+  if (receipt.normalized !== undefined) {
+    try {
+      const recomputed = await computeCidJcs(receipt.normalized);
+      if (recomputed !== receipt.cid) return false;
+    } catch {
+      return false;
+    }
   }
-  // Without normalized we can't recompute; rely on bundle-level signature, so return true if key exists.
-  return !!selectJwk(jwks, kid);
+  // Structural hop number
+  if (typeof receipt.hop !== "number" || receipt.hop < 1) return false;
+  // If kid provided ensure it's present in JWKS
+  if (kid && !selectJwk(jwks, kid)) return false;
+  // Basic format pass
+  return true;
 }
+
+export async function verifyExport(
+  bundle: ExportedChainBundle,
+  jwks: { keys: JsonWebKeyEd25519[] }
+): Promise<boolean> {
+  if (!bundle.chain?.length) return false;
+  const last = bundle.chain[bundle.chain.length - 1];
+  const responseCid = bundle.response_cid || last.receipt_hash;
+  if (last.receipt_hash !== responseCid) return false;
+  const kid = bundle.kid;
+  const jwk = selectJwk(jwks, kid);
+  if (!jwk || jwk.crv !== "Ed25519" || !jwk.x) return false;
+  if (!bundle.signature) return false;
+  // Validate signature decodes and is correct size (Ed25519 = 64 bytes)
+  try {
+    const sigBytes = decodeB64u(bundle.signature);
+    if (sigBytes.length !== 64) return false;
+  } catch {
+    return false;
+  }
+  const message = new TextEncoder().encode(`${responseCid}|${bundle.trace_id}|${bundle.exported_at}`);
+  return verifyEd25519(message, bundle.signature, jwk.x);
+}
+
+// Backwards compatibility alias (older name)
+export const verifyExportBundle = verifyExport;

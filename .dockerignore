@@ -1,0 +1,14 @@
+# Reduce build context size (keep core-api only)
+.git
+node_modules
+apps/console
+packages
+docs
+.turbo
+*.log
+pnpm-lock.yaml
+pnpm-workspace.yaml
+turbo.json
+*.md
+!README.md
+LICENSE
