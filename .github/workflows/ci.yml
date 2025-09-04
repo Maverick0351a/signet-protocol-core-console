@@ -31,7 +31,7 @@ jobs:
           # Match package.json packageManager (pnpm@9.7.0) to avoid mismatch errors
           version: 9.7.0
       - name: Setup Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
           cache: 'pnpm'
